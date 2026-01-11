@@ -3,13 +3,12 @@
   "version": "1.0.0",
   "manifest_version": 1,
   "description": "Ativa vídeos em tela cheia para todos.",
-  "interfaces": [
-    {
-      "id": "action",
-      "type": "action",
-      "icon": "https://www.owlbear.rodeo/icons/icon-192.png",
-      "title": "Ativar Cinematic",
-      "panel": "/index.html"
-    }
-  ]
+  "icon": "https://www.owlbear.rodeo/icons/icon-192.png",
+  "action": {
+    "id": "action",
+    "type": "action",
+    "title": "Ativar Cinematic",
+    "icon": "https://www.owlbear.rodeo/icons/icon-192.png",
+    "panel": "index.html"
+  }
 }
