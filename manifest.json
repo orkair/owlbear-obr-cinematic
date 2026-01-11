@@ -1,14 +1,14 @@
 {
   "name": "Cinematic Pro",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "manifest_version": 1,
-  "description": "Ativa vídeos em tela cheia para todos.",
-  "icon": "https://www.owlbear.rodeo/icons/icon-192.png",
+  "description": "YouTube Sync Player",
+  "icon": "https://raw.githubusercontent.com/owlbear-rodeo/echo/refs/heads/main/public/icon.svg",
   "action": {
-    "id": "action",
-    "type": "action",
-    "title": "Ativar Cinematic",
-    "icon": "https://www.owlbear.rodeo/icons/icon-192.png",
-    "panel": "index.html"
+    "title": "Cinematic Player",
+    "icon": "https://raw.githubusercontent.com/owlbear-rodeo/echo/refs/heads/main/public/icon.svg",
+    "popover": "index.html",
+    "height": 200,
+    "width": 320
   }
 }
