@@ -1,99 +1,91 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <script src="https://unpkg.com/@owlbear-rodeo/sdk"></script>
+    <meta charset="UTF-8">
+    <script src="https://unpkg.com/@owlbear-rodeo/sdk@2/dist/index.js"></script>
     <style>
-        body { margin: 0; background: black; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        #admin-panel { display: none; flex-direction: column; gap: 10px; padding: 20px; background: #222; border-radius: 8px; border: 1px solid #444; }
-        #player-container { display: none; width: 100vw; height: 100vh; }
-        iframe { width: 100%; height: 100%; border: none; }
-        input { padding: 10px; border-radius: 4px; border: none; width: 280px; background: #333; color: white; }
-        button { padding: 12px; cursor: pointer; background: #6200ee; color: white; border: none; border-radius: 4px; font-weight: bold; }
+        body { margin: 0; background: #222; color: white; font-family: sans-serif; overflow: hidden; }
+        
+        /* Estilo do Painel do Mestre (Popover) */
+        #admin-view { display: none; padding: 10px; flex-direction: column; gap: 8px; text-align: center; }
+        input { padding: 8px; width: 90%; border-radius: 4px; border: none; background: #333; color: white; margin: 0 auto; }
+        button { padding: 8px; cursor: pointer; background: #6200ee; color: white; border: none; border-radius: 4px; width: 100%; }
         button:hover { background: #7c22ff; }
+
+        /* Estilo do Player (Modal Fullscreen) */
+        #player-view { display: none; width: 100vw; height: 100vh; background: black; }
+        iframe { width: 100%; height: 100%; border: none; }
     </style>
 </head>
 <body>
 
-    <div id="admin-panel">
-        <h3 style="margin:0 0 10px 0; text-align: center;">🎬 Cinematic YouTube</h3>
-        <input type="text" id="videoUrl" placeholder="Cole o link do YouTube aqui">
-        <button onclick="sendVideo()">DAR PLAY PARA TODOS</button>
-        <p style="font-size: 10px; color: #aaa; margin-top: 10px;">O vídeo abrirá em tela cheia para todos os jogadores.</p>
+    <div id="admin-view">
+        <h4 style="margin: 0 0 5px 0;">🎬 Cinematic Controller</h4>
+        <input type="text" id="videoUrl" placeholder="Cole o link do YouTube...">
+        <button onclick="broadcastVideo()">TRANSMITIR</button>
+        <small style="color:#aaa; font-size: 10px; margin-top:5px;">Isso abrirá a tela cheia para todos.</small>
     </div>
 
-    <div id="player-container">
+    <div id="player-view">
         <iframe id="yt-iframe" allow="autoplay; encrypted-media; fullscreen"></iframe>
+        <button onclick="OBR.modal.close('cinematic-fullscreen')" style="position:absolute; top:10px; right:10px; width:auto; background:red; opacity:0.5;">X</button>
     </div>
 
     <script>
-        const adminPanel = document.getElementById('admin-panel');
-        const playerContainer = document.getElementById('player-container');
-        const iframe = document.getElementById('yt-iframe');
-
         OBR.onReady(async () => {
-            const role = await OBR.player.getRole();
-            
-            // Só mostra o painel de controle se for o Mestre
-            if (role === "GM") {
-                adminPanel.style.display = 'flex';
-            }
+            const queryString = window.location.search;
+            const params = new URLSearchParams(queryString);
+            const mode = params.get('mode');
 
-            // Escuta o comando vindo de outros (ou de você mesmo)
-            OBR.broadcast.onMessage("PLAY_CINEMATIC", (event) => {
-                startCinematic(event.data.url);
-            });
-        });
-
-        // Transforma link comum do YouTube em link de incorporação (Embed)
-        function getYoutubeEmbedUrl(url) {
-            let videoId = "";
-            if (url.includes("v=")) {
-                videoId = url.split("v=")[1].split("&")[0];
-            } else if (url.includes("be/")) {
-                videoId = url.split("be/")[1].split("?")[0];
-            }
-            // Parâmetros: autoplay=1 (toca sozinho), controls=0 (esconde botões), rel=0 (não mostra vídeos sugeridos)
-            return `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=1&rel=0&modestbranding=1`;
-        }
-
-        async function sendVideo() {
-            const rawUrl = document.getElementById('videoUrl').value;
-            if (!rawUrl) return alert("Cole um link válido!");
-            
-            const embedUrl = getYoutubeEmbedUrl(rawUrl);
-            
-            // Avisa todo mundo para abrir o vídeo
-            await OBR.broadcast.sendMessage("PLAY_CINEMATIC", { url: embedUrl });
-            
-            // Abre para o próprio mestre
-            startCinematic(embedUrl);
-        }
-
-        function startCinematic(url) {
-            // Se já estivermos no modo "modal/tela cheia", apenas carrega o vídeo
-            if (window.location.search.includes("mode=video")) {
-                adminPanel.style.display = 'none';
-                playerContainer.style.display = 'block';
-                iframe.src = url;
-            } else {
-                // Se estivermos no menu lateral, manda o Owlbear abrir o Modal gigante
-                OBR.modal.open({
-                    id: "cinematic-fullscreen",
-                    url: window.location.href + (window.location.href.includes('?') ? '&' : '?') + "mode=video&url=" + encodeURIComponent(url),
-                    fullScreen: true,
+            // CENA 1: Se o modo for "fullscreen", estamos rodando o vídeo
+            if (mode === 'fullscreen') {
+                document.getElementById('player-view').style.display = 'block';
+                const videoUrl = params.get('url');
+                if (videoUrl) {
+                    const embedUrl = getYoutubeEmbed(videoUrl);
+                    document.getElementById('yt-iframe').src = embedUrl;
+                }
+            } 
+            // CENA 2: Caso contrário, estamos no Popover do menu
+            else {
+                document.getElementById('admin-view').style.display = 'flex';
+                
+                // Ouve se alguém mandou dar play (para o caso de jogadores)
+                OBR.broadcast.onMessage("CINEMATIC_PLAY", (event) => {
+                    openFullscreen(event.data.url);
                 });
             }
+        });
+
+        // Função para limpar o link do YouTube
+        function getYoutubeEmbed(url) {
+            let id = "";
+            if (url.includes("v=")) id = url.split("v=")[1].split("&")[0];
+            else if (url.includes("youtu.be/")) id = url.split("youtu.be/")[1].split("?")[0];
+            else if (url.includes("embed/")) id = url.split("embed/")[1].split("?")[0];
+            
+            return `https://www.youtube.com/embed/${id}?autoplay=1&controls=0&rel=0&modestbranding=1`;
         }
 
-        // Verifica se esta instância da página já nasceu para ser o vídeo em tela cheia
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('mode') === 'video') {
-            const videoUrl = params.get('url');
-            if (videoUrl) {
-                adminPanel.style.display = 'none';
-                playerContainer.style.display = 'block';
-                iframe.src = videoUrl;
-            }
+        // Função chamada pelo botão do Mestre
+        async function broadcastVideo() {
+            const rawUrl = document.getElementById('videoUrl').value;
+            if (!rawUrl) return;
+
+            // 1. Manda o comando para todos os outros
+            await OBR.broadcast.sendMessage("CINEMATIC_PLAY", { url: rawUrl });
+
+            // 2. Abre para o próprio Mestre também
+            openFullscreen(rawUrl);
+        }
+
+        // Ação que realmente abre a tela cheia
+        function openFullscreen(url) {
+            OBR.modal.open({
+                id: "cinematic-fullscreen",
+                url: `/index.html?mode=fullscreen&url=${encodeURIComponent(url)}`,
+                fullScreen: true
+            });
         }
     </script>
 </body>
